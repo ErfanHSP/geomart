@@ -3,6 +3,8 @@ const configs = require("./../../configs")
 const UserModel = require("./../../models/User")
 const jwt = require("jsonwebtoken")
 const bcrypt = require("bcrypt")
+const parseTime = require("../../helpers/parseTime")
+const RedisService = require("./../../services/redis")
 
 exports.displayRegisterPage = (req, res, next) => {
     try {
@@ -41,8 +43,8 @@ exports.register = async (req, res, next) => {
             expiresIn: configs.auth.refreshTokenExpire + "d"
         })
 
-        let accessTokenCookieMaxAge = Number(configs.auth.accessTokenExpire) * 60 * 1000
-        let refreshTokenCookieMaxAge = Number(configs.auth.refreshTokenExpire) * 24 * 3600 * 1000
+        let accessTokenCookieMaxAge = parseTime.minutesToSeconds(configs.auth.accessTokenExpire)
+        let refreshTokenCookieMaxAge = parseTime.daysToSeconds(configs.auth.refreshTokenExpire)
 
         res.cookie("access-token", accessToken, {
             maxAge: accessTokenCookieMaxAge,
@@ -57,8 +59,13 @@ exports.register = async (req, res, next) => {
             secure: true,
             path: "/auth/refresh" // It is not allowed for all apis.
         })
-        return res.status(201).redirect("/profile")
-
+        // Storing refresh-token in redis.
+        await RedisService.setRefreshToken(user._id, refreshToken)
+        res.status(200).json({
+            success: true,
+            message: "User logged in successfully.",
+            redirect: "/profile"
+        })
     } catch (error) {
         next(error)
     }
@@ -94,8 +101,8 @@ exports.login = async (req, res, next) => {
             expiresIn: configs.auth.refreshTokenExpire + "d"
         })
 
-        let accessTokenCookieMaxAge = Number(configs.auth.accessTokenExpire) * 60 * 1000
-        let refreshTokenCookieMaxAge = Number(configs.auth.refreshTokenExpire) * 24 * 3600 * 1000
+        let accessTokenCookieMaxAge = parseTime.minutesToSeconds(configs.auth.accessTokenExpire)
+        let refreshTokenCookieMaxAge = parseTime.daysToSeconds(configs.auth.refreshTokenExpire)
 
         res.cookie("access-token", accessToken, {
             maxAge: accessTokenCookieMaxAge,
@@ -108,8 +115,10 @@ exports.login = async (req, res, next) => {
             sameSite: "Strict",
             httpOnly: true,
             secure: true,
-            path: "/auth/refresh" // It is not allowed for all apis.
+            path: "/auth/refresh" // It is not allowed for all apis it hides cookie from browser's cookie section.
         })
+        // Storing refresh-token in redis.
+        await RedisService.setRefreshToken(user._id, refreshToken)
         res.status(200).json({
             success: true,
             message: "User logged in successfully.",
