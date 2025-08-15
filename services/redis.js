@@ -8,6 +8,7 @@ const redis = new Redis({
     host: "127.0.0.1"
 })
 
+// this only returns the key, not the data from redis.
 const getRefreshTokenRedisKey = (userID) => {
     return `refresh-token:${userID}`
 }
@@ -18,7 +19,17 @@ const setRefreshToken = async (userID, token) => {
     return await redis.set(getRefreshTokenRedisKey(userID), hashToken, "EX", refreshTokenExpireInSeconds)
 }
 
+const getRefreshToken = async (userID) => {
+    await redis.get(getRefreshTokenRedisKey(userID))
+}
+
+const deleteRefreshToken = async (userID) => {
+    return await redis.del(getRefreshTokenRedisKey(userID))
+}
+
 module.exports = {
     getRefreshTokenRedisKey,
-    setRefreshToken
+    setRefreshToken,
+    getRefreshToken,
+    deleteRefreshToken
 }

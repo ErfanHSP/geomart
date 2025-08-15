@@ -16,7 +16,7 @@ const userRouter = require("./routes/v1/user")
 
 app.use("/", homeRouter)
 app.use("/auth", authRouter)
-app.use("/profile", userRouter)
+app.use("/user", userRouter)
 
 app.get("/health", (req, res) => {
     res.status(200).json({
