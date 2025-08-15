@@ -22,6 +22,14 @@ exports.displayLoginPage = (req, res, next) => {
     }
 }
 
+exports.displayForgotPasswordPage = (req, res, next) => {
+    try {
+        return res.sendFile(path.join(configs.frontendPath, "./forgot-password.html"))
+    } catch (error) {
+        next(error)
+    }
+}
+
 exports.register = async (req, res, next) => {
     try {
         const {name, email, password} = req.body

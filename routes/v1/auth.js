@@ -16,4 +16,7 @@ router.route("/login")
 router.post("/refresh-access-token", controller.refreshAccessToken)
 router.get("/logout", authentication, controller.logout)
 
+router.route("/forgot-password")
+    .get(controller.displayForgotPasswordPage)
+
 module.exports = router
