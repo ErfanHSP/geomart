@@ -8,5 +8,8 @@ router.route("/register")
     .get(controller.displayRegisterPage)
     .post(bodyValidator(registerValidator), controller.register)
 
+router.route("/login")
+    .get(controller.displayLoginPage)
+    .post(controller.login)
 
 module.exports = router
