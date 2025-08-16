@@ -11,7 +11,12 @@ const loginValidator = joi.object({
     password: joi.string().required()
 })
 
+const resetPasswordValidator = joi.object({
+    newPassword: joi.string().required().min(8)
+})
+
 module.exports = {
     registerValidator,
-    loginValidator
+    loginValidator,
+    resetPasswordValidator
 }

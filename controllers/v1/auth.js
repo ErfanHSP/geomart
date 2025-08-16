@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken")
 const bcrypt = require("bcrypt")
 const parseTime = require("../../helpers/parseTime")
 const RedisService = require("./../../services/redis")
+const nodemailer = require("./../../services/nodemailer")
 
 exports.displayRegisterPage = (req, res, next) => {
     try {
@@ -25,6 +26,22 @@ exports.displayLoginPage = (req, res, next) => {
 exports.displayForgotPasswordPage = (req, res, next) => {
     try {
         return res.sendFile(path.join(configs.frontendPath, "./forgot-password.html"))
+    } catch (error) {
+        next(error)
+    }
+}
+
+exports.displayVerifyOtpPage = (req, res, next) => {
+    try {
+        res.sendFile(path.join(configs.frontendPath, "./verify-otp.html"))
+    } catch (error) {
+        next(error)
+    }
+}
+
+exports.displayResetPasswordPage = (req, res, next) => {
+    try {
+        return res.sendFile(path.join(configs.frontendPath, "./reset-password.html"))
     } catch (error) {
         next(error)
     }
@@ -195,6 +212,87 @@ exports.logout = async (req, res, next) => {
         res.clearCookie("refresh-token")
         await RedisService.deleteRefreshToken(user._id)
         return res.redirect("/home")
+    } catch (error) {
+        next(error)
+    }
+}
+
+exports.sendForgotPasswordEmailOtp = async (req, res, next) => {
+    try {
+        const {email} = req.body
+        const user = await UserModel.findOne({email})
+        if (!user) {
+            return res.status(200).json({
+                success: true,
+                message: "If your email exists in our database, we'll send a verification code.",
+                redirect: `/auth/verify-otp/${email}`
+            })
+        }
+        // generating otp code
+        let otp = RedisService.generateOtpCode()
+        nodemailer.sendVerificationEmail(user.email, otp)
+        
+        await RedisService.setEmailOtp(user.email, otp)
+        
+        return res.status(200).json({
+            success: true,
+            message: "If your email exists in our database, we'll send a verification code.",
+            redirect: `/auth/verify-otp/${email}`
+        })
+    } catch (error) {
+        next(error)
+    }
+}
+
+exports.verifyOtp = async (req, res, next) => {
+    try {
+        const {otp} = req.body
+        const {email} = req.params
+        console.log("otp in verifyOtp: ", otp);
+        console.log("email in verifyOtp: ", email);
+        
+        if (!email) {
+            return res.status(401).json({
+                success: false,
+                message: "email not found.",
+                redirect: "/auth/forgot-password"
+            })
+        }
+        const savedOtp = await RedisService.getEmailOtp(email)
+        const compareOtps = bcrypt.compareSync(otp, savedOtp)
+        if (!compareOtps) {
+            return res.status(401).json({
+                success: false,
+                message: "Otp code is not valid."
+            })
+        }
+        return res.status(200).json({
+            success: true,
+            message: "Your email is verified, now you can change your password.",
+            redirect: "/auth/reset-password"
+        })
+
+    } catch (error) {
+        next(error)
+    }
+}
+
+exports.resetUserPassword = async (req, res, next) => {
+    try {
+        const {newPassword, newPasswordRepeat, email} = req.body
+        if (!newPassword, !newPasswordRepeat) {
+            return res.status(401).json({
+                success: false,
+                message: "Validation Failure."
+            })
+        }
+        if (newPassword !== newPasswordRepeat) {
+            return res.status(401).json({
+                success: false,
+                message: "Passwords do not match."
+            })
+        }
+
     } catch (error) {
         next(error)
     }
